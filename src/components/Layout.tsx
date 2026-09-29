@@ -25,7 +25,7 @@ const accountItems: MenuItem[] = [
 
 // Signed-in frame: top bar with the ☰ side menu (top left) and the user's avatar (top right).
 export default function Layout() {
-  const { profile, signOut } = useSession()
+  const { profile, signOut, notice, dismissNotice } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -99,6 +99,17 @@ export default function Layout() {
       <main>
         <Outlet />
       </main>
+
+      {notice ? (
+        <div className={`toast toast-${notice.tone}`} role="status">
+          <span className="toast-icon">{notice.tone === 'success' ? '⌚' : '⚠️'}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <strong>{notice.title}</strong>
+            <p>{notice.text}</p>
+          </div>
+          <button type="button" className="icon-button" aria-label="Dismiss" onClick={dismissNotice}>×</button>
+        </div>
+      ) : null}
     </>
   )
 }

@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router'
 import { createWork, getWorkers, type ApiWorker, type Priority } from '../api'
 import Avatar from '../components/Avatar'
 import { PageHeader, Spinner } from '../components/ui'
-import { errorText, priorityColor } from '../format'
+import { bandDeliveryNotice, errorText, priorityColor } from '../format'
 import { useSession } from '../session'
 
 const priorities: Priority[] = ['Low', 'Medium', 'High']
 
 export default function CreateWork() {
-  const { refreshWork } = useSession()
+  const { refreshWork, showNotice } = useSession()
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -58,8 +58,9 @@ export default function CreateWork() {
     try {
       // One task per selected worker, as in the phone app. Workers are sent by id so two
       // people with the same name can never receive each other's work.
-      await Promise.all(selectedWorkers.map((workerId) => createWork({ title: title.trim(), priority, due: dueDate || 'Unscheduled', subtasks, assignedTo: workerId })))
+      const results = await Promise.all(selectedWorkers.map((workerId) => createWork({ title: title.trim(), priority, due: dueDate || 'Unscheduled', subtasks, assignedTo: workerId })))
       await refreshWork()
+      showNotice(bandDeliveryNotice(results))
       navigate('/', { replace: true })
     } catch (error) {
       setErrorMessage(errorText(error, 'Unable to publish the work.'))

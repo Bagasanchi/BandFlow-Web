@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router'
 import { createWork, getWorkers, type ApiWorker } from '../api'
 import Avatar from '../components/Avatar'
 import { PageHeader, Spinner } from '../components/ui'
-import { errorText } from '../format'
+import { bandDeliveryNotice, errorText } from '../format'
 import { useSession } from '../session'
 
 export default function AssignWork() {
-  const { profile, refreshWork } = useSession()
+  const { profile, refreshWork, showNotice } = useSession()
   const navigate = useNavigate()
   const [workers, setWorkers] = useState<ApiWorker[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -34,8 +34,9 @@ export default function AssignWork() {
     setIsAssigning(true)
     setErrorMessage('')
     try {
-      await createWork({ title, priority: 'Medium', subtasks: [], assignedTo: selected.id })
+      const result = await createWork({ title, priority: 'Medium', subtasks: [], assignedTo: selected.id })
       await refreshWork()
+      showNotice(bandDeliveryNotice([result]))
       navigate('/', { replace: true })
     } catch (error) {
       setErrorMessage(errorText(error, 'Unable to assign the work.'))

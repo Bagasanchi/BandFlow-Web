@@ -162,8 +162,10 @@ export async function getWork(): Promise<WorkItem[]> {
   }));
 }
 
+export type BandDelivery = { sent: boolean; error?: string }
+
 export async function createWork(work: NewWork) {
-  return request('/work', { method: 'POST', body: JSON.stringify(work) });
+  return request<{ id: string; band: BandDelivery }>('/work', { method: 'POST', body: JSON.stringify(work) });
 }
 
 export async function updateWorkStatus(workId: string, status: WorkStatus) {

@@ -71,7 +71,7 @@ export default function TaskDetail() {
             {subtask.status === 'active' ? <span className="chip status-progress">On the band</span> : null}
           </div>
         ))}
-        <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted)' }}>Subtasks are completed from the wristband and update here automatically after refreshing.</p>
+        <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted)' }}>Subtasks are completed from the wristband; this page updates on its own.</p>
       </section>
 
       {errorMessage ? <p className="message-error">{errorMessage}</p> : null}
