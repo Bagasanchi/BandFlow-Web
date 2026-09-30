@@ -21,10 +21,12 @@ function greeting(now: Date) {
   return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 }
 
-// The step most recently sent to the wristband (there is one watch, so it shows the latest one).
-function stepOnWatch(workItems: WorkItem[]) {
+// The step most recently sent to a worker's wristband: their newest active step.
+// Without a worker, the newest active step of anyone (the one the watch received last).
+function stepOnWatch(workItems: WorkItem[], workerName?: string) {
   let latest: { task: WorkItem; description: string; order: number; since: Date | null } | null = null
   for (const task of workItems) {
+    if (workerName && task.assignedTo !== workerName) continue
     for (const subtask of task.subtasks) {
       if (subtask.status !== 'active') continue
       const since = parseServerTime(subtask.started_at)
@@ -41,6 +43,7 @@ export default function BossDashboard() {
   const [confirming, setConfirming] = useState<WorkItem | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [now] = useState(() => new Date())
+  const [watchWorker, setWatchWorker] = useState('')
 
   useEffect(() => {
     getWorkers().then(setWorkers).catch(() => setWorkers([]))
@@ -54,7 +57,9 @@ export default function BossDashboard() {
   const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)
   const dueSoon = active.filter((item) => { const due = parseDue(item.due); return due && due <= weekAhead }).length
   const averageProgress = active.length ? Math.round(active.reduce((total, item) => total + item.progress, 0) / active.length) : 0
-  const onWatch = stepOnWatch(workItems)
+  // Until the boss picks someone, follow the worker whose watch got a step most recently.
+  const selectedWorker = watchWorker || stepOnWatch(workItems)?.task.assignedTo || workers[0]?.name || ''
+  const onWatch = selectedWorker ? stepOnWatch(workItems, selectedWorker) : null
   const visible = filter === 'all' ? workItems : workItems.filter((item) => item.status === filter)
 
   const kpis = [
@@ -123,18 +128,32 @@ export default function BossDashboard() {
 
         <div className="side-stack">
           <section className="panel">
-            <header className="panel-head"><h2>On the watch now</h2></header>
+            <header className="panel-head">
+              <h2>Worker's wristband</h2>
+              {workers.length ? (
+                <select id="watch-worker" className="select select-small" aria-label="Show the wristband of" value={selectedWorker} onChange={(event) => setWatchWorker(event.target.value)}>
+                  {workers.map((worker) => <option key={worker.id} value={worker.name}>{worker.name}</option>)}
+                </select>
+              ) : null}
+            </header>
             <div className="watch-panel">
-              {onWatch ? (
+              {workers.length === 0 ? (
+                <p className="empty">No worker accounts yet.</p>
+              ) : (
                 <>
-                  <Wristband text={onWatch.description} compact />
+                  {/* "Waiting for a task..." is what the firmware shows before it receives a step. */}
+                  <Wristband text={onWatch ? onWatch.description : 'Waiting for a task...'} compact />
                   <div className="watch-meta">
-                    <Link to={`/tasks/${onWatch.task.id}`}>{onWatch.task.title}</Link>
-                    <span>{onWatch.task.assignedTo} · step {onWatch.order} of {onWatch.task.subtasks.length}{onWatch.since ? ` · since ${formatTime(onWatch.since)}` : ''}</span>
+                    {onWatch ? (
+                      <>
+                        <Link to={`/tasks/${onWatch.task.id}`}>{onWatch.task.title}</Link>
+                        <span>Step {onWatch.order} of {onWatch.task.subtasks.length}{onWatch.since ? ` · since ${formatTime(onWatch.since)}` : ''}</span>
+                      </>
+                    ) : (
+                      <span>{selectedWorker} has no step waiting on the wristband.</span>
+                    )}
                   </div>
                 </>
-              ) : (
-                <p className="empty">Nothing is on the wristband. Publish work with steps to send one.</p>
               )}
             </div>
           </section>

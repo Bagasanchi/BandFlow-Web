@@ -1853,6 +1853,16 @@ h3 {
   color: var(--muted);
 }
 
+.select-small {
+  width: auto;
+  min-height: 34px;
+  max-width: 180px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .segmented-small {
   padding: 3px;
   border-radius: 10px;
