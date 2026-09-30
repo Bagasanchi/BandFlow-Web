@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useSession } from '../session'
-import { BandFlowLogo } from '../components/BandFlowLogo'
+import AuthShell from '../components/AuthShell'
 import { Spinner } from '../components/ui'
 import { errorText } from '../format'
 
 export default function Login() {
-  const { signIn, isDarkTheme } = useSession()
+  const { signIn } = useSession()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,11 +55,8 @@ export default function Login() {
   }
 
   return (
-    <div className="center-screen">
+    <AuthShell>
       <div className="auth-card">
-        <div className="auth-logo">
-          <BandFlowLogo height={72} isDarkTheme={isDarkTheme} />
-        </div>
         <h1>Welcome back</h1>
         <p className="subtitle">Sign in to your workspace</p>
 
@@ -103,6 +100,6 @@ export default function Login() {
 
         <p className="footer-note">By continuing, you agree to the Terms and Privacy Policy.</p>
       </div>
-    </div>
+    </AuthShell>
   )
 }

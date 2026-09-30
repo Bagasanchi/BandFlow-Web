@@ -3,12 +3,10 @@ import { Link, useNavigate } from 'react-router'
 import { signup } from '../api'
 import { Spinner } from '../components/ui'
 import { errorText } from '../format'
-import { useSession } from '../session'
-import { BandFlowLogo } from '../components/BandFlowLogo'
+import AuthShell from '../components/AuthShell'
 
 export default function SignUp() {
   const navigate = useNavigate()
-  const { isDarkTheme } = useSession()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,11 +37,8 @@ export default function SignUp() {
   }
 
   return (
-    <div className="center-screen">
+    <AuthShell>
       <div className="auth-card">
-        <div className="auth-logo">
-          <BandFlowLogo height={72} isDarkTheme={isDarkTheme} />
-        </div>
         <h1>Create your account</h1>
         <p className="subtitle">Start managing your workspace</p>
 
@@ -73,6 +68,6 @@ export default function SignUp() {
           </p>
         </form>
       </div>
-    </div>
+    </AuthShell>
   )
 }

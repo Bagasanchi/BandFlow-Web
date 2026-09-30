@@ -3,8 +3,7 @@ import { Link, useLocation } from 'react-router'
 import { requestPasswordReset } from '../api'
 import { Spinner } from '../components/ui'
 import { errorText } from '../format'
-import { useSession } from '../session'
-import { BandFlowLogo } from '../components/BandFlowLogo'
+import AuthShell from '../components/AuthShell'
 
 const steps = [
   'Your boss sees the request in Manage Workers.',
@@ -14,7 +13,6 @@ const steps = [
 
 export default function ForgotPassword() {
   const location = useLocation()
-  const { isDarkTheme } = useSession()
   const [email, setEmail] = useState<string>((location.state as { email?: string } | null)?.email ?? '')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -40,11 +38,8 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="center-screen">
+    <AuthShell>
       <div className="auth-card">
-        <div className="auth-logo">
-          <BandFlowLogo height={72} isDarkTheme={isDarkTheme} />
-        </div>
         <h1>{sentTo ? 'Request sent' : 'Forgot password?'}</h1>
         <p className="subtitle">{sentTo ? 'Your boss will set a temporary password for you.' : "No problem. We'll ask your boss to set a temporary password."}</p>
 
@@ -90,6 +85,6 @@ export default function ForgotPassword() {
           </p>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }

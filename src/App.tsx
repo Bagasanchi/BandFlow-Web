@@ -6,14 +6,15 @@ import AssignWork from './pages/AssignWork'
 import BossDashboard from './pages/BossDashboard'
 import BossProgress from './pages/BossProgress'
 import CreateWork from './pages/CreateWork'
+import AllTasks from './pages/AllTasks'
 import ForgotPassword from './pages/ForgotPassword'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import SignUp from './pages/SignUp'
 import TaskDetail from './pages/TaskDetail'
 import WorkerDashboard from './pages/WorkerDashboard'
-import WorkerTasks from './pages/WorkerTasks'
 import Workers from './pages/Workers'
 import { useSession } from './session'
 
@@ -30,10 +31,11 @@ export default function App() {
   if (!profile) {
     return (
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     )
   }
@@ -42,7 +44,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={profile.role === 'boss' ? <BossDashboard /> : <WorkerDashboard />} />
-        <Route path="tasks" element={<WorkerTasks />} />
+        <Route path="tasks" element={<AllTasks />} />
         <Route path="tasks/:id" element={<TaskDetail />} />
         <Route path="work/new" element={<BossOnly><CreateWork /></BossOnly>} />
         <Route path="work/assign" element={<BossOnly><AssignWork /></BossOnly>} />

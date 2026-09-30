@@ -1,36 +1,74 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import { deleteWork } from '../api'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
+import { deleteWork, getWorkers, type ApiWorker, type WorkItem, type WorkStatus } from '../api'
 import Avatar from '../components/Avatar'
-import { StatusChip } from '../components/ui'
-import { errorText } from '../format'
+import TaskTable from '../components/TaskTable'
+import Wristband from '../components/Wristband'
+import { errorText, formatTime, parseDue, parseServerTime } from '../format'
 import { useSession } from '../session'
+
+type Filter = 'all' | WorkStatus
+const filters: Array<{ value: Filter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'In Progress', label: 'In progress' },
+  { value: 'Review', label: 'Review' },
+  { value: 'Done', label: 'Done' },
+]
+const statusColor: Record<string, string> = { active: 'var(--done)', away: 'var(--review)', offline: 'var(--muted)' }
+
+function greeting(now: Date) {
+  const hour = now.getHours()
+  return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+}
+
+// The step most recently sent to the wristband (there is one watch, so it shows the latest one).
+function stepOnWatch(workItems: WorkItem[]) {
+  let latest: { task: WorkItem; description: string; order: number; since: Date | null } | null = null
+  for (const task of workItems) {
+    for (const subtask of task.subtasks) {
+      if (subtask.status !== 'active') continue
+      const since = parseServerTime(subtask.started_at)
+      if (!latest || (since && (!latest.since || since > latest.since))) latest = { task, description: subtask.description, order: subtask.order_index, since }
+    }
+  }
+  return latest
+}
 
 export default function BossDashboard() {
   const { profile, workItems, refreshWork } = useSession()
-  const navigate = useNavigate()
-  const [showCompleted, setShowCompleted] = useState(false)
+  const [filter, setFilter] = useState<Filter>('all')
+  const [workers, setWorkers] = useState<ApiWorker[]>([])
+  const [confirming, setConfirming] = useState<WorkItem | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
+  const [now] = useState(() => new Date())
+
+  useEffect(() => {
+    getWorkers().then(setWorkers).catch(() => setWorkers([]))
+  }, [])
+
   if (!profile) return null
 
-  const doneCount = workItems.filter((item) => item.status === 'Done').length
-  const overview = [
-    { icon: '📊', value: workItems.length, label: 'Total Tasks' },
-    { icon: '⚙️', value: workItems.filter((item) => item.status === 'In Progress').length, label: 'In Progress' },
-    { icon: '🏁', value: doneCount, label: 'Done' },
-  ]
-  const actions = [
-    { icon: '✏️', title: 'Create Work', detail: 'Define new tasks or projects', to: '/work/new' },
-    { icon: '📈', title: 'See Work Progress', detail: 'Sprint analytics and team velocity', to: '/progress' },
-    { icon: '👥', title: 'Manage Workers', detail: 'View worker info and edit availability', to: '/workers' },
-  ]
-  const visibleWorkItems = showCompleted ? workItems : workItems.filter((item) => item.status !== 'Done')
+  const active = workItems.filter((item) => item.status !== 'Done')
+  const review = workItems.filter((item) => item.status === 'Review')
+  const done = workItems.filter((item) => item.status === 'Done')
+  const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)
+  const dueSoon = active.filter((item) => { const due = parseDue(item.due); return due && due <= weekAhead }).length
+  const averageProgress = active.length ? Math.round(active.reduce((total, item) => total + item.progress, 0) / active.length) : 0
+  const onWatch = stepOnWatch(workItems)
+  const visible = filter === 'all' ? workItems : workItems.filter((item) => item.status === filter)
 
-  const removeWork = async (id: string, title: string) => {
-    if (!window.confirm(`Delete task?\n\nThis will permanently delete "${title}".`)) return
+  const kpis = [
+    { label: 'Active tasks', value: active.length, note: dueSoon ? `${dueSoon} due within a week` : 'Nothing due this week' },
+    { label: 'Waiting for review', value: review.length, note: review[0]?.title ?? 'Nothing to review' },
+    { label: 'Finished', value: done.length, note: `of ${workItems.length} ${workItems.length === 1 ? 'task' : 'tasks'} in total` },
+    { label: 'Average progress', value: `${averageProgress}%`, note: 'Across active work' },
+  ]
+
+  const remove = async (task: WorkItem) => {
     setErrorMessage('')
     try {
-      await deleteWork(id)
+      await deleteWork(task.id)
+      setConfirming(null)
       await refreshWork()
     } catch (error) {
       setErrorMessage(errorText(error, 'Unable to delete the task.'))
@@ -38,84 +76,90 @@ export default function BossDashboard() {
   }
 
   return (
-    <div className="page">
-      <section className="hero" style={{ background: 'var(--accent-soft)' }}>
-        <div className="identity">
-          <button type="button" onClick={() => navigate('/profile')} style={{ background: 'none', border: 'none', padding: 0 }} aria-label="Open profile">
-            <Avatar name={profile.fullName} src={profile.avatar} size={52} />
-          </button>
-          <div>
-            <div className="eyebrow">Boss Dashboard</div>
-            <div className="name">{profile.fullName}</div>
-          </div>
-        </div>
-        <div className="grid-3">
-          {overview.map((item) => (
-            <div key={item.label} className="stat">
-              <span className="icon">{item.icon}</span>
-              <span className="value">{item.value}</span>
-              <span className="label">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+    <div className="page page-wide">
+      <div className="greet">
+        <h1>{greeting(now)}, {profile.fullName.split(' ')[0]}</h1>
+        <p>{now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
 
-      <div className="grid-2">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {actions.map((action) => (
-            <button key={action.title} type="button" className="action-card" onClick={() => navigate(action.to)}>
-              <span className="icon">{action.icon}</span>
-              <span>
-                <strong>{action.title}</strong>
-                <small>{action.detail}</small>
-              </span>
-              <span className="chevron">›</span>
-            </button>
-          ))}
-          <button type="button" className="action-card primary" onClick={() => navigate('/work/assign')}>
-            <span className="icon">🤖</span>
-            <span>
-              <strong>Assign Work to Specific Worker</strong>
-              <small>AI-powered recommendations</small>
-            </span>
-            <span className="chevron">›</span>
-          </button>
-        </div>
-
-        <section className="card" style={{ paddingBottom: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ flex: 1 }}>
-              <h2 className="card-title">Team Overview</h2>
-              <p className="card-subtitle">{showCompleted ? 'All assigned work' : 'Active work only'}</p>
-            </div>
-            <button type="button" className={`toggle-chip${showCompleted ? ' selected' : ''}`} onClick={() => setShowCompleted((current) => !current)}>
-              {showCompleted ? 'Hide completed' : `Show completed (${doneCount})`}
-            </button>
+      <div className="kpis">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className="kpi">
+            <span>{kpi.label}</span>
+            <strong>{kpi.value}</strong>
+            <small>{kpi.note}</small>
           </div>
-          {errorMessage ? <p className="message-error">{errorMessage}</p> : null}
-          {visibleWorkItems.length === 0 ? <p className="empty">{workItems.length === 0 ? 'No work has been assigned yet.' : 'All assigned work is completed.'}</p> : null}
-          {visibleWorkItems.map((item) => (
-            <div key={item.id} className="list-row clickable" onClick={() => navigate(`/tasks/${item.id}`)} style={{ borderRadius: 12, paddingInline: 6 }}>
-              <Avatar name={item.assignedTo} size={36} />
-              <div className="copy">
-                <strong>{item.title}</strong>
-                <small>{item.assignedTo}</small>
-              </div>
-              <StatusChip status={item.status} />
-              <button
-                type="button"
-                className="icon-button"
-                aria-label={`Delete ${item.title}`}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  void removeWork(item.id, item.title)
-                }}
-              >
-                ×
-              </button>
+        ))}
+      </div>
+
+      {confirming ? (
+        <div className="confirm-bar" role="alertdialog" aria-label="Confirm delete">
+          <span>Delete <strong>{confirming.title}</strong>? This can't be undone.</span>
+          <button type="button" className="btn btn-danger btn-small" onClick={() => void remove(confirming)}>Delete</button>
+          <button type="button" className="btn btn-outline btn-small" onClick={() => setConfirming(null)}>Cancel</button>
+        </div>
+      ) : null}
+      {errorMessage ? <p className="message-error">{errorMessage}</p> : null}
+
+      <div className="dash-cols dash-table">
+        <section className="panel">
+          <header className="panel-head">
+            <h2>Tasks</h2>
+            <div className="segmented segmented-small" role="group" aria-label="Filter tasks">
+              {filters.map((option) => (
+                <button key={option.value} type="button" className={filter === option.value ? 'selected' : ''} aria-pressed={filter === option.value} onClick={() => setFilter(option.value)}>
+                  {option.label}
+                </button>
+              ))}
             </div>
-          ))}
+          </header>
+          <TaskTable
+            tasks={visible}
+            showAssignee
+            onDelete={(task) => setConfirming(task)}
+            emptyText={workItems.length ? 'No tasks with this status.' : 'No work yet. Use New work to create the first task.'}
+          />
         </section>
+
+        <div className="side-stack">
+          <section className="panel">
+            <header className="panel-head"><h2>On the watch now</h2></header>
+            <div className="watch-panel">
+              {onWatch ? (
+                <>
+                  <Wristband text={onWatch.description} compact />
+                  <div className="watch-meta">
+                    <Link to={`/tasks/${onWatch.task.id}`}>{onWatch.task.title}</Link>
+                    <span>{onWatch.task.assignedTo} · step {onWatch.order} of {onWatch.task.subtasks.length}{onWatch.since ? ` · since ${formatTime(onWatch.since)}` : ''}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="empty">Nothing is on the wristband. Publish work with steps to send one.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="panel">
+            <header className="panel-head"><h2>Team</h2><Link to="/workers" className="panel-link">Manage</Link></header>
+            {workers.length === 0 ? <p className="empty table-empty">No worker accounts yet.</p> : null}
+            <ul className="team-list">
+              {workers.map((worker) => {
+                const count = active.filter((item) => item.assignedTo === worker.name).length
+                const status = worker.status ?? 'active'
+                return (
+                  <li key={worker.id}>
+                    <Avatar name={worker.name} size={32} />
+                    <span className="team-copy">
+                      <strong>{worker.name}</strong>
+                      <small>{worker.password_reset_requested_at ? 'Asked for a password reset' : count === 1 ? '1 active task' : `${count} active tasks`}</small>
+                    </span>
+                    <span className="team-state" style={{ color: statusColor[status] }}>{status}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
       </div>
     </div>
   )

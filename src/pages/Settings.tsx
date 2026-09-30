@@ -126,7 +126,7 @@ export default function Settings() {
         style={{ minHeight: 50, marginTop: 8 }}
         onClick={() => {
           signOut()
-          navigate('/login', { replace: true })
+          navigate('/', { replace: true })
         }}
       >
         Log out
