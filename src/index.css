@@ -247,6 +247,20 @@ h3 {
   text-decoration: none;
 }
 
+.brand svg {
+  display: block;
+}
+
+.auth-logo {
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.auth-logo svg {
+  max-width: 100%;
+  height: auto;
+}
+
 .brand img {
   width: 32px;
   height: 32px;

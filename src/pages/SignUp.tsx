@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router'
 import { signup } from '../api'
 import { Spinner } from '../components/ui'
 import { errorText } from '../format'
+import { useSession } from '../session'
+import { BandFlowLogo } from '../components/BandFlowLogo'
 
 export default function SignUp() {
   const navigate = useNavigate()
+  const { isDarkTheme } = useSession()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -38,9 +41,8 @@ export default function SignUp() {
   return (
     <div className="center-screen">
       <div className="auth-card">
-        <div className="brand" style={{ fontSize: 28 }}>
-          <img src="/icon.png" alt="" style={{ width: 42, height: 42, borderRadius: 12 }} />
-          Workspace Pro
+        <div className="auth-logo">
+          <BandFlowLogo height={72} isDarkTheme={isDarkTheme} />
         </div>
         <h1>Create your account</h1>
         <p className="subtitle">Start managing your workspace</p>

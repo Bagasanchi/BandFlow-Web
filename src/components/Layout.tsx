@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import Avatar from './Avatar'
+import { BandFlowLogo } from './BandFlowLogo'
 import { useSession } from '../session'
 
 type MenuItem = { icon: string; title: string; detail: string; to: string }
@@ -25,7 +26,7 @@ const accountItems: MenuItem[] = [
 
 // Signed-in frame: top bar with the ☰ side menu (top left) and the user's avatar (top right).
 export default function Layout() {
-  const { profile, signOut, notice, dismissNotice } = useSession()
+  const { profile, signOut, notice, dismissNotice, isDarkTheme } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -57,7 +58,7 @@ export default function Layout() {
         <button type="button" className="menu-button" aria-label="Open menu" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>
           <span /><span /><span />
         </button>
-        <Link to="/" className="brand"><img src="/icon.png" alt="" />BandFlow</Link>
+        <Link to="/" className="brand" aria-label="BandFlow home"><BandFlowLogo height={30} isDarkTheme={isDarkTheme} cropped /></Link>
         <div className="topbar-spacer" />
         <button type="button" className="topbar-user" onClick={() => navigate('/profile')} aria-label="Open profile">
           <span className="topbar-name">{profile.fullName}</span>
