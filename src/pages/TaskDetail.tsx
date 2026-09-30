@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { updateWorkStatus, type WorkStatus } from '../api'
+import { setSubtaskDone, updateWorkStatus, type SubtaskDetail, type WorkStatus } from '../api'
 import Avatar from '../components/Avatar'
 import { PageHeader, ProgressBar, Spinner, StatusChip } from '../components/ui'
 import { errorText, priorityColor } from '../format'
@@ -14,6 +14,7 @@ export default function TaskDetail() {
   const navigate = useNavigate()
   const [isUpdating, setIsUpdating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [togglingId, setTogglingId] = useState('')
   const task = workItems.find((item) => item.id === id)
 
   if (!task) {
@@ -22,6 +23,20 @@ export default function TaskDetail() {
         <PageHeader title="Task not found" subtitle="It may have been deleted." />
       </div>
     )
+  }
+
+  const toggleSubtask = async (subtask: SubtaskDetail) => {
+    if (togglingId) return
+    setTogglingId(subtask.id)
+    setErrorMessage('')
+    try {
+      await setSubtaskDone(task.id, subtask.id, subtask.status !== 'done')
+      await refreshWork()
+    } catch (error) {
+      setErrorMessage(errorText(error, 'Could not update the subtask.'))
+    } finally {
+      setTogglingId('')
+    }
   }
 
   const submitStatus = async (status: WorkStatus) => {
@@ -63,15 +78,23 @@ export default function TaskDetail() {
         <h2 className="card-title" style={{ letterSpacing: 0.8, fontSize: 14, marginBottom: 10 }}>SUBTASKS</h2>
         {task.subtasks.length === 0 ? <p className="empty" style={{ padding: 0 }}>No subtasks were added.</p> : null}
         {task.subtasks.map((subtask) => (
-          <div key={subtask.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 40 }}>
-            <span className={`checkbox ${subtask.status}`}>{subtask.status === 'done' ? '✓' : ''}</span>
+          <button
+            key={subtask.id}
+            type="button"
+            role="checkbox"
+            aria-checked={subtask.status === 'done'}
+            disabled={Boolean(togglingId)}
+            onClick={() => void toggleSubtask(subtask)}
+            className="subtask-toggle"
+          >
+            <span className={`checkbox ${subtask.status}`}>{togglingId === subtask.id ? '…' : subtask.status === 'done' ? '✓' : ''}</span>
             <span style={{ flex: 1, textDecoration: subtask.status === 'done' ? 'line-through' : 'none', color: subtask.status === 'active' ? 'var(--title)' : undefined, fontWeight: subtask.status === 'active' ? 800 : 500 }}>
               {subtask.description}
             </span>
             {subtask.status === 'active' ? <span className="chip status-progress">On the band</span> : null}
-          </div>
+          </button>
         ))}
-        <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted)' }}>Subtasks are completed from the wristband; this page updates on its own.</p>
+        <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted)' }}>Click a step to tick it, or finish it on the wristband. The next step is sent to the watch automatically.</p>
       </section>
 
       {errorMessage ? <p className="message-error">{errorMessage}</p> : null}
