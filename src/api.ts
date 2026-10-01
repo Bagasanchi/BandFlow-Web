@@ -163,9 +163,11 @@ export async function getWork(): Promise<WorkItem[]> {
 }
 
 export type BandDelivery = { sent: boolean; error?: string }
+// What the server's AI planner did when no steps were typed in.
+export type AiPlanning = { used: boolean; steps?: number; error?: string }
 
 export async function createWork(work: NewWork) {
-  return request<{ id: string; band: BandDelivery }>('/work', { method: 'POST', body: JSON.stringify(work) });
+  return request<{ id: string; band: BandDelivery; ai?: AiPlanning }>('/work', { method: 'POST', body: JSON.stringify(work) });
 }
 
 // Ticks or unticks one subtask. When the step on the wristband is finished, the server sends the next one.

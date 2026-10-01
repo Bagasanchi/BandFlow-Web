@@ -1,4 +1,4 @@
-import type { BandDelivery, Priority, WorkStatus } from './api'
+import type { AiPlanning, BandDelivery, Priority, WorkStatus } from './api'
 
 export function statusClass(status: WorkStatus) {
   return status === 'Done' ? 'status-done' : status === 'Review' ? 'status-review' : 'status-progress'
@@ -9,19 +9,21 @@ export function priorityColor(priority: Priority | string) {
 }
 
 // Turns POST /work results into the notice shown after publishing work.
-export function bandDeliveryNotice(results: Array<{ band?: BandDelivery }>) {
+export function bandDeliveryNotice(results: Array<{ band?: BandDelivery; ai?: AiPlanning }>) {
+  const ai = results[0]?.ai
+  const aiNote = ai?.used ? `BandFlow split it into ${ai.steps} steps. ` : ai?.error ? `AI steps were not added (${ai.error}) ` : ''
   const failed = results.find((result) => !result.band?.sent)
   if (!failed) {
     return {
       tone: 'success' as const,
       title: 'Work published',
-      text: results.length > 1 ? `${results.length} tasks were created. The wristband shows the most recent one.` : 'The first step is now on the wristband.',
+      text: aiNote + (results.length > 1 ? `${results.length} tasks were created. The wristband shows the most recent one.` : 'The first step is now on the wristband.'),
     }
   }
   return {
     tone: 'warning' as const,
     title: 'Work saved, not on the wristband',
-    text: `${failed.band?.error ?? 'The BLE bridge did not answer.'} Start the bridge (python app.py in the naprock folder) with the watch switched on.`,
+    text: `${aiNote}${failed.band?.error ?? 'The BLE bridge did not answer.'} Start the bridge (python app.py in the naprock folder) with the watch switched on.`,
   }
 }
 
